@@ -19,6 +19,8 @@ LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/../..
 
 LOCAL_CFLAGS += -fexceptions -frtti -Wno-unused-lambda-capture
 
+LOCAL_CFLAGS += -DXPENG_BUILD_SPLIT_BUNDLE
+
 LOCAL_LDLIBS += -landroid
 
 # The dynamic libraries (.so files) that this module depends on.

@@ -107,6 +107,12 @@ class JSIExecutor : public JSExecutor {
     invokee();
   }
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  virtual void registerBundle(
+      const std::string &sourceURL,
+      const std::string &script) override;
+#endif
+
  private:
   class NativeModuleProxy;
 

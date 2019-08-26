@@ -11,6 +11,10 @@
 
 #include <folly/Conv.h>
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+#include <cxxreact/JSBigString.h>
+#endif
+
 namespace facebook {
 namespace react {
 
@@ -36,6 +40,12 @@ public:
   JSModulesUnbundle() {}
   virtual ~JSModulesUnbundle() {}
   virtual Module getModule(uint32_t moduleId) const = 0;
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  // Throws std::runtime_error on failure.
+  virtual std::unique_ptr<const JSBigString> getStartupCode() = 0;
+  virtual bool exists(uint32_t moduleId) const = 0;
+#endif
 
 private:
   JSModulesUnbundle(const JSModulesUnbundle&) = delete;

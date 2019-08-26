@@ -14,6 +14,10 @@ import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nullable;
 
+/* XPENG_BUILD_SPLIT_BUNDLE */
+import android.content.res.AssetManager;
+/* XPENG_BUILD_SPLIT_BUNDLE */
+
 /**
  * A higher level API on top of the asynchronous JSC bridge. This provides an
  * environment allowing the invocation of JavaScript methods and lets a set of
@@ -103,4 +107,15 @@ public interface CatalystInstance
   JavaScriptContextHolder getJavaScriptContextHolder();
 
   void addJSIModules(List<JSIModuleSpec> jsiModules);
+
+  /* XPENG_BUILD_SPLIT_BUNDLE */
+  boolean isSubUnbundleAvailable();
+
+  /**
+   * Register a sub unbundle script
+   * @param assetManager
+   * @param assetsURL
+   */
+  void registerSubUnbundleFromAssets(AssetManager assetManager, String assetsURL);
+  /* XPENG_BUILD_SPLIT_BUNDLE */
 }

@@ -73,6 +73,19 @@ public:
 
   void handleMemoryPressure(int pressureLevel);
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  static bool isIndexedRAMBundleFromScript(const char *script);
+  void loadRAMBundleFromString(const char *sourceScript,
+      size_t length,
+      const std::string& sourceURL,
+      bool loadSynchronously,
+      bool noNeedRegisterBundle);
+  void registerRAMBundleFromString(const char *sourceScript,
+      size_t length,
+      const std::string& sourceURL);
+  void registerBundle(const std::string &sourceURL, const std::string &script);
+#endif
+
 private:
   void callNativeModules(folly::dynamic &&calls, bool isEndOfBatch);
   void loadApplication(std::unique_ptr<RAMBundleRegistry> bundleRegistry,
@@ -89,6 +102,10 @@ private:
   std::mutex m_syncMutex;
   std::condition_variable m_syncCV;
   bool m_syncReady = false;
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  bool m_ramBundleRegistered;
+#endif
 };
 
 } // namespace react

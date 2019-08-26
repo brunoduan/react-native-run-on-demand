@@ -29,6 +29,11 @@ public:
     AAssetManager *assetManager,
     const std::string& assetName);
   virtual Module getModule(uint32_t moduleId) const override;
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  virtual bool exists(uint32_t moduleId) const override { return false; };
+  virtual std::unique_ptr<const JSBigString> getStartupCode() override { return nullptr; }
+#endif
 private:
   AAssetManager *m_assetManager = nullptr;
   std::string m_moduleDirectory;

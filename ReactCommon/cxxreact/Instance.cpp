@@ -16,6 +16,11 @@
 #include "SystraceSection.h"
 
 #include <cxxreact/JSIndexedRAMBundle.h>
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+#include <cxxreact/JSIndexedRAMBundleString.h>
+#endif
+
 #include <folly/Memory.h>
 #include <folly/MoveWrapper.h>
 #include <folly/json.h>
@@ -197,6 +202,67 @@ ModuleRegistry &Instance::getModuleRegistry() { return *moduleRegistry_; }
 void Instance::handleMemoryPressure(int pressureLevel) {
   nativeToJsBridge_->handleMemoryPressure(pressureLevel);
 }
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+bool Instance::isIndexedRAMBundleFromScript(const char *script) {
+  std::istringstream bundle_stream(script);
+  BundleHeader header;
+
+  if (!bundle_stream) {
+    return false;
+  }
+
+  bundle_stream.read(reinterpret_cast<char *>(&header), sizeof(header));
+
+  return parseTypeFromHeader(header) == ScriptTag::RAMBundle;
+}
+
+void Instance::loadRAMBundleFromString(const char *sourceScript,
+    size_t length,
+    const std::string& sourceURL,
+    bool loadSynchronously,
+    bool noNeedRegisterBundle) {
+  if (noNeedRegisterBundle) {
+    loadRAMBundle(
+        nullptr,
+        nullptr,
+        sourceURL,
+        loadSynchronously);
+    return;
+  }
+
+  if (!m_ramBundleRegistered) {
+    m_ramBundleRegistered = true;
+    auto bundle = folly::make_unique<JSIndexedRAMBundleString>(sourceScript, length);
+    auto startupScript = bundle->getStartupCode();
+    auto registry = RAMBundleRegistry::multipleBundlesRegistry(std::move(bundle), JSIndexedRAMBundleString::buildFactory());
+    loadRAMBundle(
+        std::move(registry),
+        std::move(startupScript),
+        sourceURL,
+        loadSynchronously);
+  } else {
+    registerBundle(sourceURL, std::string(sourceScript, length));
+    loadRAMBundle(
+        nullptr,
+        nullptr,
+        sourceURL,
+        loadSynchronously);
+  }
+}
+
+void Instance::registerRAMBundleFromString(
+    const char *sourceScript,
+    size_t length,
+    const std::string& sourceURL) {
+  CHECK(m_ramBundleRegistered);
+  registerBundle(sourceURL, std::string(sourceScript, length));
+}
+
+void Instance::registerBundle(const std::string &sourceURL, const std::string &script) {
+  nativeToJsBridge_->registerBundle(sourceURL, script);
+}
+#endif
 
 } // namespace react
 } // namespace facebook

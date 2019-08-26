@@ -8,6 +8,10 @@
 #include <folly/Memory.h>
 #include <folly/String.h>
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+#include <cxxreact/JSIndexedRAMBundleString.h>
+#endif
+
 namespace facebook {
 namespace react {
 
@@ -37,6 +41,31 @@ void RAMBundleRegistry::registerBundle(
   m_bundlePaths.emplace(bundleId, std::move(bundlePath));
 }
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+bool RAMBundleRegistry::existsJSModulesUndundle() {
+  return m_fromStringBundles.size() > 0;
+}
+
+void RAMBundleRegistry::registerBundle(
+    const std::string &sourcePath,
+    const std::string& script) {
+  m_fromStringBundles.emplace(sourcePath, m_factory(script));
+}
+
+std::unique_ptr<const JSBigString> RAMBundleRegistry::getStartupCodeFromStringBundles(
+    const std::string &sourcePath) {
+  std::unordered_map<std::string, std::unique_ptr<JSModulesUnbundle>>::iterator it =
+    m_fromStringBundles.find(sourcePath);
+  if (it != m_fromStringBundles.end()) {
+    if (it->second) {
+      return it->second->getStartupCode();
+    }
+  }
+
+  return nullptr;
+}
+#endif
+
 JSModulesUnbundle::Module RAMBundleRegistry::getModule(
     uint32_t bundleId, uint32_t moduleId) {
   if (m_bundles.find(bundleId) == m_bundles.end()) {
@@ -56,6 +85,19 @@ JSModulesUnbundle::Module RAMBundleRegistry::getModule(
     }
     m_bundles.emplace(bundleId, m_factory(bundlePath->second));
   }
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  std::unordered_map<std::string, std::unique_ptr<JSModulesUnbundle>>::iterator it =
+    m_fromStringBundles.begin();
+  for (; it != m_fromStringBundles.end(); it++) {
+    if (it->second) {
+      JSModulesUnbundle *bundle = it->second.get();
+      if (bundle && bundle->exists(moduleId)) {
+        return bundle->getModule(moduleId);
+      }
+    }
+  }
+#endif
 
   auto module = getBundle(bundleId)->getModule(moduleId);
   if (bundleId == MAIN_BUNDLE_ID) {

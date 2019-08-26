@@ -33,6 +33,10 @@ def dependenciesPath = System.getenv("REACT_NATIVE_DEPENDENCIES")
 // and the build will use that.
 def boostPath = dependenciesPath ?: System.getenv("REACT_NATIVE_BOOST_PATH")
 
+// #ifdef XPENG_BUILD_SPLIT_BUNDLE
+def XPENG_BUILD_SPLIT_BUNDLE = true
+// #endif
+
 task createNativeDepsDirectories {
     downloadsDir.mkdirs()
     thirdPartyNdkDir.mkdirs()
@@ -286,6 +290,9 @@ android {
 
         buildConfigField("boolean", "IS_INTERNAL_BUILD", "false")
         buildConfigField("int", "EXOPACKAGE_FLAGS", "0")
+        // #ifdef XPENG_BUILD_SPLIT_BUNDLE
+        buildConfigField("boolean", "XPENG_BUILD_SPLIT_BUNDLE", "${XPENG_BUILD_SPLIT_BUNDLE}")
+        // #endif
         testApplicationId("com.facebook.react.tests.gradle")
         testInstrumentationRunner("android.support.test.runner.AndroidJUnitRunner")
     }

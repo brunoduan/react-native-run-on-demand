@@ -13,6 +13,10 @@
 
 #include <cxxreact/JSModulesUnbundle.h>
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+#include <cxxreact/JSBigString.h>
+#endif
+
 #ifndef RN_EXPORT
 #define RN_EXPORT __attribute__((visibility("default")))
 #endif
@@ -41,12 +45,25 @@ public:
   void registerBundle(uint32_t bundleId, std::string bundlePath);
   JSModulesUnbundle::Module getModule(uint32_t bundleId, uint32_t moduleId);
   virtual ~RAMBundleRegistry() {};
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  void registerBundle(const std::string &sourceURL, const std::string &script);
+  std::unique_ptr<const JSBigString> getStartupCodeFromStringBundles(
+      const std::string &sourcePath);
+  bool existsJSModulesUndundle();
+#endif
+
 private:
   JSModulesUnbundle* getBundle(uint32_t bundleId) const;
 
   std::function<std::unique_ptr<JSModulesUnbundle>(std::string)> m_factory;
   std::unordered_map<uint32_t, std::string> m_bundlePaths;
   std::unordered_map<uint32_t, std::unique_ptr<JSModulesUnbundle>> m_bundles;
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  std::unordered_map<std::string, std::unique_ptr<JSModulesUnbundle>> m_fromStringBundles;
+#endif
+
 };
 
 }  // namespace react

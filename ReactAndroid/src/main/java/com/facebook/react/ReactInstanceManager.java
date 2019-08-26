@@ -92,6 +92,7 @@ import com.facebook.react.views.imagehelper.ResourceDrawableIdHelper;
 import com.facebook.soloader.SoLoader;
 import com.facebook.systrace.Systrace;
 import com.facebook.systrace.SystraceMessage;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -101,6 +102,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
+
+/* XPENG_BUILD_SPLIT_BUNDLE */
+import xpeng.com.facebook.react.util.RuntimeConfig;
+import java.lang.reflect.Field;
+/* XPENG_BUILD_SPLIT_BUNDLE */
 
 /**
  * This class is managing instances of {@link CatalystInstance}. It exposes a way to configure
@@ -167,6 +173,12 @@ public class ReactInstanceManager {
   private final @Nullable NativeModuleCallExceptionHandler mNativeModuleCallExceptionHandler;
   private final @Nullable JSIModulePackage mJSIModulePackage;
   private List<ViewManager> mViewManagers;
+
+  /* XPENG_BUILD_SPLIT_BUNDLE */
+  private List<String> mUnbundleURLs;
+  private volatile boolean mIsSubUnBundleReady = false;
+  private final Object mSubUnBundleReadytLock = new Object();
+  /* XPENG_BUILD_SPLIT_BUNDLE */
 
   private class ReactContextInitParams {
     private final JavaScriptExecutorFactory mJsExecutorFactory;
@@ -272,6 +284,10 @@ public class ReactInstanceManager {
     if (mUseDeveloperSupport) {
       mDevSupportManager.startInspector();
     }
+
+    /* XPENG_BUILD_SPLIT_BUNDLE */
+    mUnbundleURLs = new ArrayList<>();
+    /* XPENG_BUILD_SPLIT_BUNDLE */
   }
 
   private ReactInstanceManagerDevHelper createDevHelperInterface() {
@@ -1005,15 +1021,46 @@ public class ReactInstanceManager {
       ReactMarker.logMarker(ATTACH_MEASURED_ROOT_VIEWS_END);
     }
 
+    /* XPENG_BUILD_SPLIT_BUNDLE */
+    /*
     ReactInstanceEventListener[] listeners =
       new ReactInstanceEventListener[mReactInstanceEventListeners.size()];
     final ReactInstanceEventListener[] finalListeners =
         mReactInstanceEventListeners.toArray(listeners);
+    */
+    if (RuntimeConfig.isSplitRamBundle()) {
+      UiThreadUtil.runOnUiThread(
+        new Runnable() {
+          @Override
+          public void run() {
+            for (String assetsURL : mUnbundleURLs) {
+              CatalystInstance instance = reactContext.getCatalystInstance();
+              if (instance.isSubUnbundleAvailable()) {
+                instance.registerSubUnbundleFromAssets(
+                        getCurrentReactContext().getAssets(),
+                        assetsURL);
+              }
+            }
+            mUnbundleURLs.clear();
+
+            synchronized (mSubUnBundleReadytLock) {
+              mIsSubUnBundleReady = true;
+            }
+          }
+      });
+    }
+    /* XPENG_BUILD_SPLIT_BUNDLE */
 
     UiThreadUtil.runOnUiThread(
         new Runnable() {
           @Override
           public void run() {
+            /* XPENG_BUILD_SPLIT_BUNDLE */
+            ReactInstanceEventListener[] listeners =
+                  new ReactInstanceEventListener[mReactInstanceEventListeners.size()];
+            final ReactInstanceEventListener[] finalListeners =
+                    mReactInstanceEventListeners.toArray(listeners);
+            /* XPENG_BUILD_SPLIT_BUNDLE */
             for (ReactInstanceEventListener listener : finalListeners) {
               listener.onReactContextInitialized(reactContext);
             }
@@ -1216,4 +1263,65 @@ public class ReactInstanceManager {
     }
     SystraceMessage.endSection(TRACE_TAG_REACT_JAVA_BRIDGE).flush();
   }
+
+  /* XPENG_BUILD_SPLIT_BUNDLE */
+  public boolean checkSubUnBundleReady() {
+    synchronized (mSubUnBundleReadytLock) {
+      return mIsSubUnBundleReady;
+    }
+  }
+
+  public void setBundleLoader(JSBundleLoader bundleLoader) {
+    try {
+      Field field = this.getClass().getDeclaredField("mBundleLoader");
+      field.setAccessible(true);
+      field.set(this, bundleLoader);
+    } catch (Throwable t) {
+    }
+  }
+
+  public void createCommonReactContext() {
+    if (!hasStartedCreatingInitialContext()) {
+      createReactContextInBackground();
+    }
+  }
+
+  public void createBusinessReactContext()
+          throws Exception {
+    CatalystInstance instance = getCurrentReactContext().getCatalystInstance();
+    if (!instance.isSubUnbundleAvailable()) {
+      return;
+    }
+
+    Field field = instance.getClass().getDeclaredField("mJSBundleLoader");
+    field.setAccessible(true);
+    field.set(instance, mBundleLoader);
+    field = instance.getClass().getDeclaredField("mJSBundleHasLoaded");
+    field.setAccessible(true);
+    field.set(instance, false);
+    instance.runJSBundle();
+  }
+
+  public void registerSubUnbundleFromAssets(final String assetURL) {
+    UiThreadUtil.assertOnUiThread();
+
+    if (checkSubUnBundleReady()) {
+      ReactContext context = getCurrentReactContext();
+      if (context != null) {
+        CatalystInstance instance = context.getCatalystInstance();
+        if (!instance.isSubUnbundleAvailable()) {
+          return;
+        }
+
+        instance.registerSubUnbundleFromAssets(
+                context.getAssets(),
+                assetURL);
+      }
+    } else {
+      if (!mUnbundleURLs.contains(assetURL)) {
+        mUnbundleURLs.add(assetURL);
+      }
+    }
+  }
+  /* XPENG_BUILD_SPLIT_BUNDLE */
 }

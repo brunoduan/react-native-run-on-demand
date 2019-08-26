@@ -112,6 +112,10 @@ void CatalystInstanceImpl::registerNatives() {
     makeNativeMethod("setGlobalVariable", CatalystInstanceImpl::setGlobalVariable),
     makeNativeMethod("getJavaScriptContext", CatalystInstanceImpl::getJavaScriptContext),
     makeNativeMethod("jniHandleMemoryPressure", CatalystInstanceImpl::handleMemoryPressure),
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+    makeNativeMethod("jniLoadScriptFromAssetsExt", CatalystInstanceImpl::jniLoadScriptFromAssetsExt),
+    makeNativeMethod("jniRegisterSubUnbundleFromAssets", CatalystInstanceImpl::jniRegisterSubUnbundleFromAssets),
+#endif
   });
 
   JNativeRunnable::registerNatives();
@@ -265,5 +269,67 @@ jlong CatalystInstanceImpl::getJavaScriptContext() {
 void CatalystInstanceImpl::handleMemoryPressure(int pressureLevel) {
   instance_->handleMemoryPressure(pressureLevel);
 }
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+void CatalystInstanceImpl::jniLoadScriptFromAssetsExt(
+    jni::alias_ref<JAssetManager::javaobject> assetManager,
+    const std::string& assetURL,
+    bool loadSynchronously,
+    bool noNeedRegisterBundle) {
+  const int kAssetsLength = 9;  // strlen("assets://");
+  auto sourceURL = assetURL.substr(kAssetsLength);
+  if (noNeedRegisterBundle) {
+    instance_->loadRAMBundleFromString(
+        nullptr,
+        0,
+        sourceURL,
+        loadSynchronously,
+        true);
+    return;
+  }
+
+  auto manager = extractAssetManager(assetManager);
+  auto script = loadScriptFromAssets(manager, sourceURL);
+  if (JniJSModulesUnbundle::isUnbundle(manager, sourceURL)) {
+    auto bundle = JniJSModulesUnbundle::fromEntryFile(manager, sourceURL);
+    auto registry = RAMBundleRegistry::singleBundleRegistry(std::move(bundle));
+    instance_->loadRAMBundle(
+        std::move(registry),
+        std::move(script),
+        sourceURL,
+        loadSynchronously);
+    return;
+  } else if (Instance::isIndexedRAMBundleFromScript(script->c_str())) {
+    instance_->loadRAMBundleFromString(script->c_str(),
+        script->size(),
+        sourceURL,
+        loadSynchronously,
+        false);
+  } else {
+    instance_->loadScriptFromString(std::move(script), sourceURL, loadSynchronously);
+  }
+}
+
+void CatalystInstanceImpl::jniRegisterSubUnbundleFromAssets(
+    jni::alias_ref<JAssetManager::javaobject> assetManager,
+    const std::string& assetURL,
+    bool noNeedRegisterBundle) {
+  if (noNeedRegisterBundle) {
+    return;
+  }
+
+  const int kAssetsLength = 9;
+  auto sourceURL = assetURL.substr(kAssetsLength);
+  auto manager = extractAssetManager(assetManager);
+  auto script = loadScriptFromAssets(manager, sourceURL);
+
+  if (script != nullptr &&
+      Instance::isIndexedRAMBundleFromScript(script->c_str())) {
+    instance_->registerRAMBundleFromString(script->c_str(),
+        script->size(),
+        sourceURL);
+  }
+}
+#endif
 
 }}

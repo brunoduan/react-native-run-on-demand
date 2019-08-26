@@ -69,13 +69,13 @@ JSIExecutor::JSIExecutor(
       *runtime, "__jsiExecutorDescription", runtime->description());
 }
 
+#ifndef XPENG_BUILD_SPLIT_BUNDLE
 void JSIExecutor::loadApplicationScript(
     std::unique_ptr<const JSBigString> script,
     std::string sourceURL) {
   SystraceSection s("JSIExecutor::loadApplicationScript");
 
   // TODO: check for and use precompiled HBC
-
   runtime_->global().setProperty(
       *runtime_,
       "nativeModuleProxy",
@@ -150,8 +150,10 @@ void JSIExecutor::loadApplicationScript(
     ReactMarker::logTaggedMarker(
         ReactMarker::RUN_JS_BUNDLE_START, scriptName.c_str());
   }
+
   runtime_->evaluateJavaScript(
       std::make_unique<BigStringBuffer>(std::move(script)), sourceURL);
+
   flush();
   if (hasLogger) {
     ReactMarker::logMarker(ReactMarker::CREATE_REACT_CONTEXT_STOP);
@@ -159,6 +161,106 @@ void JSIExecutor::loadApplicationScript(
         ReactMarker::RUN_JS_BUNDLE_STOP, scriptName.c_str());
   }
 }
+
+#else
+void JSIExecutor::loadApplicationScript(
+    std::unique_ptr<const JSBigString> script,
+    std::string sourceURL) {
+  SystraceSection s("JSIExecutor::loadApplicationScript");
+
+  if (!bundleRegistry_->existsJSModulesUndundle()) {
+    // TODO: check for and use precompiled HBC
+    runtime_->global().setProperty(
+        *runtime_,
+        "nativeModuleProxy",
+        Object::createFromHostObject(
+            *runtime_, std::make_shared<NativeModuleProxy>(*this)));
+
+    runtime_->global().setProperty(
+        *runtime_,
+        "nativeFlushQueueImmediate",
+        Function::createFromHostFunction(
+            *runtime_,
+            PropNameID::forAscii(*runtime_, "nativeFlushQueueImmediate"),
+            1,
+            [this](
+                jsi::Runtime&,
+                const jsi::Value&,
+                const jsi::Value* args,
+                size_t count) {
+              if (count != 1) {
+                throw std::invalid_argument(
+                    "nativeFlushQueueImmediate arg count must be 1");
+              }
+              callNativeModules(args[0], false);
+              return Value::undefined();
+            }));
+
+    runtime_->global().setProperty(
+        *runtime_,
+        "nativeCallSyncHook",
+        Function::createFromHostFunction(
+            *runtime_,
+            PropNameID::forAscii(*runtime_, "nativeCallSyncHook"),
+            1,
+            [this](
+                jsi::Runtime&,
+                const jsi::Value&,
+                const jsi::Value* args,
+                size_t count) { return nativeCallSyncHook(args, count); }));
+
+    if (logger_) {
+      // Only inject the logging function if it was supplied by the caller.
+      runtime_->global().setProperty(
+          *runtime_,
+          "nativeLoggingHook",
+          Function::createFromHostFunction(
+              *runtime_,
+              PropNameID::forAscii(*runtime_, "nativeLoggingHook"),
+              2,
+              [this](
+                  jsi::Runtime&,
+                  const jsi::Value&,
+                  const jsi::Value* args,
+                  size_t count) {
+                if (count != 2) {
+                  throw std::invalid_argument(
+                      "nativeLoggingHook takes 2 arguments");
+                }
+                logger_(
+                    args[0].asString(*runtime_).utf8(*runtime_),
+                    folly::to<unsigned int>(args[1].asNumber()));
+                return Value::undefined();
+              }));
+    }
+
+    if (runtimeInstaller_) {
+      runtimeInstaller_(*runtime_);
+    }
+  }
+
+  bool hasLogger(ReactMarker::logTaggedMarker);
+  std::string scriptName = simpleBasename(sourceURL);
+  if (hasLogger) {
+    ReactMarker::logTaggedMarker(
+        ReactMarker::RUN_JS_BUNDLE_START, scriptName.c_str());
+  }
+
+  auto jsScript = std::move(script);
+  if (!jsScript && bundleRegistry_) {
+    jsScript = bundleRegistry_->getStartupCodeFromStringBundles(sourceURL);
+  }
+  runtime_->evaluateJavaScript(
+      std::make_unique<BigStringBuffer>(std::move(jsScript)), sourceURL);
+
+  flush();
+  if (hasLogger) {
+    ReactMarker::logMarker(ReactMarker::CREATE_REACT_CONTEXT_STOP);
+    ReactMarker::logTaggedMarker(
+        ReactMarker::RUN_JS_BUNDLE_STOP, scriptName.c_str());
+  }
+}
+#endif
 
 void JSIExecutor::setBundleRegistry(std::unique_ptr<RAMBundleRegistry> r) {
   if (!bundleRegistry_) {
@@ -385,6 +487,19 @@ Value JSIExecutor::nativeCallSyncHook(const Value* args, size_t count) {
   }
   return valueFromDynamic(*runtime_, result.value());
 }
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+void JSIExecutor::registerBundle(
+    const std::string &sourceURL,
+    const std::string &script) {
+  if (!bundleRegistry_) {
+    throw std::runtime_error(
+        "Could not register bundle, need to load the main bundle at first.");
+  }
+
+  bundleRegistry_->registerBundle(sourceURL, script);
+}
+#endif
 
 } // namespace react
 } // namespace facebook

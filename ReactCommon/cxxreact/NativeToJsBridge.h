@@ -83,6 +83,11 @@ public:
    * Synchronously tears down the bridge and the main executor.
    */
   void destroy();
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  void registerBundle(const std::string &sourceURL, const std::string &script);
+#endif
+
 private:
   void runOnExecutorQueue(std::function<void(JSExecutor*)> task);
 

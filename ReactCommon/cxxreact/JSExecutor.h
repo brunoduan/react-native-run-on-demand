@@ -111,6 +111,12 @@ public:
   static std::string getSyntheticBundlePath(
       uint32_t bundleId,
       const std::string& bundlePath);
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  virtual void registerBundle(
+      const std::string &sourceURL,
+      const std::string &script) = 0;
+#endif
 };
 
 } }

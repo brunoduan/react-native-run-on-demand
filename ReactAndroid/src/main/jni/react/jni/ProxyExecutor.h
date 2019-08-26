@@ -53,6 +53,11 @@ public:
     std::string propName,
     std::unique_ptr<const JSBigString> jsonValue) override;
   virtual std::string getDescription() override;
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  virtual void registerBundle(
+      const std::string &sourceURL,
+      const std::string &script) override;
+#endif
 
 private:
   jni::global_ref<jobject> m_executor;

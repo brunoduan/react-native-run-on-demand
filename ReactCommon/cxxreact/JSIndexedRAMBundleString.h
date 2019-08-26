@@ -1,11 +1,6 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-
-// This source code is licensed under the MIT license found in the
-// LICENSE file in the root directory of this source tree.
-
 #pragma once
 
-#include <istream>
+#include <iostream>
 #include <memory>
 
 #include <cxxreact/JSBigString.h>
@@ -18,26 +13,19 @@
 namespace facebook {
 namespace react {
 
-class RN_EXPORT JSIndexedRAMBundle : public JSModulesUnbundle {
+class RN_EXPORT JSIndexedRAMBundleString : public JSModulesUnbundle {
 public:
   static std::function<std::unique_ptr<JSModulesUnbundle>(std::string)> buildFactory();
 
   // Throws std::runtime_error on failure.
-  JSIndexedRAMBundle(const char *sourceURL);
-  JSIndexedRAMBundle(std::unique_ptr<const JSBigString> script);
+  JSIndexedRAMBundleString(const char *sourceURL, size_t length);
+  JSIndexedRAMBundleString(const std::string str);
 
-#ifndef XPENG_BUILD_SPLIT_BUNDLE
   // Throws std::runtime_error on failure.
-  std::unique_ptr<const JSBigString> getStartupCode();
-#else
   std::unique_ptr<const JSBigString> getStartupCode() override;
-#endif
   // Throws std::runtime_error on failure.
   Module getModule(uint32_t moduleId) const override;
-
-#ifdef XPENG_BUILD_SPLIT_BUNDLE
-  bool exists(uint32_t moduleId) const override { return false; }
-#endif
+  bool exists(uint32_t moduleId) const override;
 
 private:
   struct ModuleData {
@@ -68,10 +56,12 @@ private:
     std::streamsize bytes,
     const std::istream::pos_type position) const;
 
-  mutable std::unique_ptr<std::istream> m_bundle;
+  mutable std::istringstream m_bundle;
   ModuleTable m_table;
   size_t m_baseOffset;
   std::unique_ptr<JSBigBufferString> m_startupCode;
+  uint32_t m_minModuleId;
+  uint32_t m_maxModuleId;
 };
 
 }  // namespace react

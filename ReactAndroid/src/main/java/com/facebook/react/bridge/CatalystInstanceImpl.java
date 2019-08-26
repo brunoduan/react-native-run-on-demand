@@ -36,6 +36,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 
+/* XPENG_BUILD_SPLIT_BUNDLE */
+import xpeng.com.facebook.react.util.RuntimeConfig;
+/* XPENG_BUILD_SPLIT_BUNDLE */
+
 /**
  * This provides an implementation of the public CatalystInstance instance.  It is public because
  * it is built by XReactInstanceManager which is in a different package.
@@ -96,6 +100,11 @@ public class CatalystInstanceImpl implements CatalystInstance {
 
   private JavaScriptContextHolder mJavaScriptContextHolder;
 
+  /* XPENG_BUILD_SPLIT_BUNDLE */
+  private boolean mSubUnbundleUnavailable;
+  private final CopyOnWriteArrayList<String> mRegisteredUnbundles;
+  /* XPENG_BUILD_SPLIT_BUNDLE */
+
   // C++ parts
   private final HybridData mHybridData;
   private native static HybridData initHybrid();
@@ -136,6 +145,10 @@ public class CatalystInstanceImpl implements CatalystInstance {
     Systrace.endSection(TRACE_TAG_REACT_JAVA_BRIDGE);
 
     mJavaScriptContextHolder = new JavaScriptContextHolder(getJavaScriptContext());
+
+    /* XPENG_BUILD_SPLIT_BUNDLE */
+    mRegisteredUnbundles = new CopyOnWriteArrayList<>();
+    /* XPENG_BUILD_SPLIT_BUNDLE */
   }
 
   private static class BridgeCallback implements ReactCallback {
@@ -205,6 +218,10 @@ public class CatalystInstanceImpl implements CatalystInstance {
   public void setSourceURLs(String deviceURL, String remoteURL) {
     mSourceURL = deviceURL;
     jniSetSourceURL(remoteURL);
+
+    /* XPENG_BUILD_SPLIT_BUNDLE */
+    mSubUnbundleUnavailable = true;
+    /* XPENG_BUILD_SPLIT_BUNDLE */
   }
 
   @Override
@@ -214,6 +231,18 @@ public class CatalystInstanceImpl implements CatalystInstance {
 
   @Override
   public void loadScriptFromAssets(AssetManager assetManager, String assetURL, boolean loadSynchronously) {
+    /* XPENG_BUILD_SPLIT_BUNDLE */
+    if (RuntimeConfig.isSplitRamBundle()) {
+      // No need to load the same bundle from assets.
+      // FIXME: check the assetURL is a unbundle file
+      boolean noNeedRegisteredBundle = mRegisteredUnbundles.contains(assetURL);
+      mSourceURL = assetURL;
+      jniLoadScriptFromAssetsExt(assetManager, assetURL, loadSynchronously, noNeedRegisteredBundle);
+      mRegisteredUnbundles.add(assetURL);
+      return;
+    }
+    /* XPENG_BUILD_SPLIT_BUNDLE */
+
     mSourceURL = assetURL;
     jniLoadScriptFromAssets(assetManager, assetURL, loadSynchronously);
   }
@@ -222,6 +251,10 @@ public class CatalystInstanceImpl implements CatalystInstance {
   public void loadScriptFromFile(String fileName, String sourceURL, boolean loadSynchronously) {
     mSourceURL = sourceURL;
     jniLoadScriptFromFile(fileName, sourceURL, loadSynchronously);
+
+    /* XPENG_BUILD_SPLIT_BUNDLE */
+    mSubUnbundleUnavailable = true;
+    /* XPENG_BUILD_SPLIT_BUNDLE */
   }
 
   @Override
@@ -631,4 +664,29 @@ public class CatalystInstanceImpl implements CatalystInstance {
           Assertions.assertNotNull(mNativeModuleCallExceptionHandler));
     }
   }
+
+  /* XPENG_BUILD_SPLIT_BUNDLE */
+  @Override
+  public boolean isSubUnbundleAvailable() {
+    return !mSubUnbundleUnavailable;
+  }
+
+  @Override
+  public void registerSubUnbundleFromAssets(AssetManager assetManager,
+                                            String assetURL) {
+    boolean noNeedRegisteredBundle = mRegisteredUnbundles.contains(assetURL);
+
+    jniRegisterSubUnbundleFromAssets(assetManager, assetURL, noNeedRegisteredBundle);
+    mRegisteredUnbundles.add(assetURL);
+  }
+
+  private native void jniLoadScriptFromAssetsExt(
+      AssetManager assetManager,
+      String assetURL,
+      boolean loadSynchronously,
+      boolean noNeedRegisterBundle);
+
+  private native void jniRegisterSubUnbundleFromAssets(
+      AssetManager assetManager, String assetURL, boolean noNeedRegisterBundle);
+  /* XPENG_BUILD_SPLIT_BUNDLE */
 }

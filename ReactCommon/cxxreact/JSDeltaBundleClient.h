@@ -39,6 +39,12 @@ public:
   Module getModule(uint32_t moduleId) const override {
     return client_->getModule(moduleId);
   }
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  virtual bool exists(uint32_t moduleId) const override { return false; };
+  virtual std::unique_ptr<const JSBigString> getStartupCode() override { return nullptr; }
+#endif
+
 private:
   const std::shared_ptr<const JSDeltaBundleClient> client_;
 };

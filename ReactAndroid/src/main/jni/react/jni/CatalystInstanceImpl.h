@@ -83,6 +83,18 @@ class CatalystInstanceImpl : public jni::HybridClass<CatalystInstanceImpl> {
   std::shared_ptr<Instance> instance_;
   std::shared_ptr<ModuleRegistry> moduleRegistry_;
   std::shared_ptr<JMessageQueueThread> moduleMessageQueue_;
+
+  #ifdef XPENG_BUILD_SPLIT_BUNDLE
+  void jniLoadScriptFromAssetsExt(
+      jni::alias_ref<JAssetManager::javaobject> assetManager,
+      const std::string& assetURL,
+      bool loadSynchronously,
+      bool noNeedRegisterBundle);
+  void jniRegisterSubUnbundleFromAssets(
+      jni::alias_ref<JAssetManager::javaobject> assetManager,
+      const std::string& assetURL,
+      bool noNeedRegisterBundle);
+  #endif
 };
 
 }}

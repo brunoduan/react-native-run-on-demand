@@ -127,4 +127,14 @@ std::string ProxyExecutor::getDescription() {
   return "Chrome";
 }
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+void ProxyExecutor::registerBundle(
+    const std::string &sourceURL,
+    const std::string &script) {
+  jni::throwNewJavaException(
+      "java/lang/UnsupportedOperationException",
+      "Loading application RAM bundles is not supported for proxy executors");
+}
+#endif
+
 } }

@@ -269,4 +269,14 @@ void NativeToJsBridge::runOnExecutorQueue(std::function<void(JSExecutor*)> task)
   });
 }
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+void NativeToJsBridge::registerBundle(
+    const std::string &sourceURL,
+    const std::string &script) {
+  runOnExecutorQueue([sourceURL, script] (JSExecutor* executor) {
+      executor->registerBundle(sourceURL, script);
+      });
+}
+#endif
+
 } }
