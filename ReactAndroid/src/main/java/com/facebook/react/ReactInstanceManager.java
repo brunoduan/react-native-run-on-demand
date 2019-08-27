@@ -104,9 +104,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 
 /* XPENG_BUILD_SPLIT_BUNDLE */
+import xpeng.com.facebook.react.tracker.TrackerConsts;
+import xpeng.com.facebook.react.tracker.TrackerListener;
 import xpeng.com.facebook.react.util.RuntimeConfig;
 import java.lang.reflect.Field;
 /* XPENG_BUILD_SPLIT_BUNDLE */
+/* XPENG_BUILD_TRACKRE */
+import com.facebook.react.common.SystemClock;
+/* XPENG_BUILD_TRACKRE */
 
 /**
  * This class is managing instances of {@link CatalystInstance}. It exposes a way to configure
@@ -180,6 +185,10 @@ public class ReactInstanceManager {
   private final Object mSubUnBundleReadytLock = new Object();
   /* XPENG_BUILD_SPLIT_BUNDLE */
 
+  /* XPENG_BUILD_TRACKER */
+  private final @Nullable TrackerListener mTrackerListener;
+  /* XPENG_BUILD_TRACKER */
+
   private class ReactContextInitParams {
     private final JavaScriptExecutorFactory mJsExecutorFactory;
     private final JSBundleLoader mJsBundleLoader;
@@ -226,6 +235,9 @@ public class ReactInstanceManager {
     int minNumShakes,
     int minTimeLeftInFrameForNonBatchedOperationMs,
     @Nullable JSIModulePackage jsiModulePackage,
+    /* XPENG_BUILD_TRACKER */
+    TrackerListener trackerListener,
+    /* XPENG_BUILD_TRACKER */
     @Nullable Map<String, RequestHandler> customPackagerCommandHandlers) {
     Log.d(ReactConstants.TAG, "ReactInstanceManager.ctor()");
     initializeSoLoaderIfNecessary(applicationContext);
@@ -288,6 +300,9 @@ public class ReactInstanceManager {
     /* XPENG_BUILD_SPLIT_BUNDLE */
     mUnbundleURLs = new ArrayList<>();
     /* XPENG_BUILD_SPLIT_BUNDLE */
+    /* XPENG_BUILD_TRACKER */
+    mTrackerListener = trackerListener;
+    /* XPENG_BUILD_TRACKER */
   }
 
   private ReactInstanceManagerDevHelper createDevHelperInterface() {
@@ -1088,6 +1103,10 @@ public class ReactInstanceManager {
   private void attachRootViewToInstance(final ReactRootView rootView) {
     Log.d(ReactConstants.TAG, "ReactInstanceManager.attachRootViewToInstance()");
     Systrace.beginSection(TRACE_TAG_REACT_JAVA_BRIDGE, "attachRootViewToInstance");
+    /* XPENG_BUILD_TRACKER */
+    onTrackBundleRender(mCurrentReactContext.getCatalystInstance());
+    /* XPENG_BUILD_TRACKER */
+    /**/
     UIManager uiManagerModule = UIManagerHelper.getUIManager(mCurrentReactContext, rootView.getUIManagerType());
 
     @Nullable Bundle initialProperties = rootView.getAppProperties();
@@ -1159,6 +1178,10 @@ public class ReactInstanceManager {
     ReactMarker.logMarker(CREATE_REACT_CONTEXT_START, jsExecutor.getName());
     final ReactApplicationContext reactContext = new ReactApplicationContext(mApplicationContext);
 
+    /* XPENG_BUILD_TRACKER */
+    reactContext.setTrackerListener(mTrackerListener);
+    /* XPENG_BUILD_TRACKER */
+
     NativeModuleCallExceptionHandler exceptionHandler = mNativeModuleCallExceptionHandler != null
         ? mNativeModuleCallExceptionHandler
         : mDevSupportManager;
@@ -1195,6 +1218,9 @@ public class ReactInstanceManager {
       catalystInstance.setGlobalVariable("__RCTProfileIsProfiling", "true");
     }
     ReactMarker.logMarker(ReactMarkerConstants.PRE_RUN_JS_BUNDLE_START);
+    /* XPENG_BUILD_TRACKER */
+    onTrackBundleLoad(catalystInstance);
+    /* XPENG_BUILD_TRACKER */
     Systrace.beginSection(TRACE_TAG_REACT_JAVA_BRIDGE, "runJSBundle");
     catalystInstance.runJSBundle();
     Systrace.endSection(TRACE_TAG_REACT_JAVA_BRIDGE);
@@ -1299,6 +1325,9 @@ public class ReactInstanceManager {
     field = instance.getClass().getDeclaredField("mJSBundleHasLoaded");
     field.setAccessible(true);
     field.set(instance, false);
+    /* XPENG_BUILD_TRACKER */
+    onTrackBundleLoad(instance);
+    /* XPENG_BUILD_TRACKER */
     instance.runJSBundle();
   }
 
@@ -1324,4 +1353,41 @@ public class ReactInstanceManager {
     }
   }
   /* XPENG_BUILD_SPLIT_BUNDLE */
+
+  /* XPENG_BUILD_TRACKER */
+  private void onTrackBundleLoad(CatalystInstance instance) {
+    if (mTrackerListener == null || instance == null) {
+      return;
+    }
+
+    Bundle payload = new Bundle();
+    payload.putLong(
+            TrackerConsts.KV.key_bld_begin_time.toString(),
+            SystemClock.currentTimeMillis());
+    TrackerListener.Message msg = new TrackerListener.Message(
+            TrackerConsts.Category.react.toString(),
+            TrackerConsts.SubCategory.bld.toString(),
+            payload);
+    mTrackerListener.onTrack(msg);
+  }
+
+  private void onTrackBundleRender(CatalystInstance instance) {
+    if (mTrackerListener == null || instance == null) {
+      return;
+    }
+
+    Bundle payload = new Bundle();
+    payload.putLong(
+            TrackerConsts.KV.key_br_begin_time.toString(),
+            SystemClock.currentTimeMillis());
+    payload.putString(
+            TrackerConsts.KV.key_bld_url.toString(), instance.getSourceURL());
+    TrackerListener.Message msg = new TrackerListener.Message(
+            TrackerConsts.Category.react.toString(),
+            TrackerConsts.SubCategory.bld.toString(),
+            payload);
+    mTrackerListener.onTrack(msg);
+  }
+  /* XPENG_BUILD_TRACKER */
+
 }

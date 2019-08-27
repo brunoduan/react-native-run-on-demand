@@ -26,6 +26,10 @@ public abstract class ReactActivity extends AppCompatActivity
 
   private final ReactActivityDelegate mDelegate;
 
+  /* XPENG_BUILD_TRACKER */
+  private long mOnCreateTime;
+  /* XPENG_BUILD_TRACKER */
+
   protected ReactActivity() {
     mDelegate = createReactActivityDelegate();
   }
@@ -50,6 +54,10 @@ public abstract class ReactActivity extends AppCompatActivity
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     mDelegate.onCreate(savedInstanceState);
+
+    /* XPENG_BUILD_TRACKER */
+    mOnCreateTime = System.currentTimeMillis();
+    /* XPENG_BUILD_TRACKER */
   }
 
   @Override
@@ -136,4 +144,10 @@ public abstract class ReactActivity extends AppCompatActivity
   protected final void loadApp(String appKey) {
     mDelegate.loadApp(appKey);
   }
+
+  /* XPENG_BUILD_TRACKER */
+  public long getCreateTime() {
+    return mOnCreateTime;
+  }
+  /* XPENG_BUILD_TRACKER */
 }

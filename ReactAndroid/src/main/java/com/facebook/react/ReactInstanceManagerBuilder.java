@@ -28,6 +28,10 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
+/* XPENG_BUILD_TRACKER */
+import xpeng.com.facebook.react.tracker.TrackerListener;
+/* XPENG_BUILD_TRACKER */
+
 /**
  * Builder class for {@link ReactInstanceManager}
  */
@@ -54,6 +58,10 @@ public class ReactInstanceManagerBuilder {
   private int mMinTimeLeftInFrameForNonBatchedOperationMs = -1;
   private @Nullable JSIModulePackage mJSIModulesPackage;
   private @Nullable Map<String, RequestHandler> mCustomPackagerCommandHandlers;
+
+  /* XPENG_BUILD_TRACKER */
+  private @Nullable TrackerListener mTrackerListener;
+  /* XPENG_BUILD_TRACKER */
 
   /* package protected */ ReactInstanceManagerBuilder() {
   }
@@ -231,6 +239,13 @@ public class ReactInstanceManagerBuilder {
     return this;
   }
 
+  /* XPENG_BUILD_TRACKER */
+  public ReactInstanceManagerBuilder setTrackerListener(TrackerListener listener) {
+    mTrackerListener = listener;
+    return this;
+  }
+  /* XPENG_BUILD_TRACKER */
+
   /**
    * Instantiates a new {@link ReactInstanceManager}.
    * Before calling {@code build}, the following must be called:
@@ -287,6 +302,9 @@ public class ReactInstanceManagerBuilder {
         mMinNumShakes,
         mMinTimeLeftInFrameForNonBatchedOperationMs,
         mJSIModulesPackage,
+        /* XPENG_BUILD_TRACKER */
+        mTrackerListener,
+        /* XPENG_BUILD_TRACKER */
         mCustomPackagerCommandHandlers);
   }
 }

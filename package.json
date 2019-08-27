@@ -1,6 +1,6 @@
 {
   "name": "react-native",
-  "version": "0.59.101",
+  "version": "0.59.103",
   "description": "A framework for building native apps using React",
   "license": "MIT",
   "repository": {
@@ -159,7 +159,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0",
-    "@react-native-community/cli": "^1.11.102",
+    "@react-native-community/cli": "^1.11.104",
     "absolute-path": "^0.0.0",
     "art": "^0.10.0",
     "base64-js": "^1.1.2",

@@ -19,6 +19,10 @@ import com.facebook.react.uimanager.UIImplementationProvider;
 import java.util.List;
 import javax.annotation.Nullable;
 
+/* XPENG_BUILD_TRACKER */
+import xpeng.com.facebook.react.tracker.TrackerListener;
+/* XPENG_BUILD_TRACKER */
+
 /**
  * Simple class that holds an instance of {@link ReactInstanceManager}. This can be used in your
  * {@link Application class} (see {@link ReactApplication}), or as a static field.
@@ -27,6 +31,10 @@ public abstract class ReactNativeHost {
 
   private final Application mApplication;
   private @Nullable ReactInstanceManager mReactInstanceManager;
+
+  /* XPENG_BUILD_TRACKER */
+  private @Nullable TrackerListener mTrackerListener;
+  /* XPENG_BUILD_TRACKER */
 
   protected ReactNativeHost(Application application) {
     mApplication = application;
@@ -63,6 +71,16 @@ public abstract class ReactNativeHost {
     }
   }
 
+  /* XPENG_BUILD_TRACKER */
+  public void setTrackerListener(TrackerListener listener) {
+    mTrackerListener = listener;
+  }
+
+  public TrackerListener getTrackerListener() {
+    return mTrackerListener;
+  }
+  /* XPENG_BUILD_TRACKER */
+
   protected ReactInstanceManager createReactInstanceManager() {
     ReactMarker.logMarker(ReactMarkerConstants.BUILD_REACT_INSTANCE_MANAGER_START);
     ReactInstanceManagerBuilder builder = ReactInstanceManager.builder()
@@ -73,6 +91,9 @@ public abstract class ReactNativeHost {
       .setJavaScriptExecutorFactory(getJavaScriptExecutorFactory())
       .setUIImplementationProvider(getUIImplementationProvider())
       .setJSIModulesPackage(getJSIModulePackage())
+      /* XPENG_BUILD_TRACKER */
+      .setTrackerListener(mTrackerListener)
+      /* XPENG_BUILD_TRACKER */
       .setInitialLifecycleState(LifecycleState.BEFORE_CREATE);
 
     for (ReactPackage reactPackage : getPackages()) {

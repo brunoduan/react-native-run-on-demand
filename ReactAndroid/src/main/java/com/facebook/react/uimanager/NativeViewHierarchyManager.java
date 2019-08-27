@@ -38,6 +38,14 @@ import com.facebook.systrace.SystraceMessage;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
+/* XPENG_BUILD_TRACKER */
+import android.app.Activity;
+import android.os.Bundle;
+import com.facebook.react.common.SystemClock;
+import xpeng.com.facebook.react.tracker.TrackerConsts;
+import xpeng.com.facebook.react.tracker.TrackerListener;
+/* XPENG_BUILD_TRACKER */
+
 /**
  * Delegate of {@link UIManagerModule} that owns the native view hierarchy and mapping between
  * native view names used in JS and corresponding instances of {@link ViewManager}. The
@@ -76,6 +84,12 @@ public class NativeViewHierarchyManager {
 
   private boolean mLayoutAnimationEnabled;
   private PopupMenu mPopupMenu;
+
+  /* XPENG_BUILD_TRACKER */
+  // No need to add a lock protection
+  private int mCreateViewCounter = 0;
+  private int mCreateViewCounterMax = 500;
+  /* XPENG_BUILD_TRACKER */
 
   public NativeViewHierarchyManager(ViewManagerRegistry viewManagers) {
     this(viewManagers, new RootViewManager());
@@ -264,6 +278,9 @@ public class NativeViewHierarchyManager {
       if (initialProps != null) {
         viewManager.updateProperties(view, initialProps);
       }
+      /* XPENG_BUILD_TRACKER */
+      trackCreateView(themedContext);
+      /* XPENG_BUILD_TRACKER */
     } finally {
       Systrace.endSection(Systrace.TRACE_TAG_REACT_VIEW);
     }
@@ -537,6 +554,10 @@ public class NativeViewHierarchyManager {
       SizeMonitoringFrameLayout view,
       ThemedReactContext themedContext) {
     addRootViewGroup(tag, view, themedContext);
+    /* XPENG_BUILD_TRACKER */
+    // reset counter
+    mCreateViewCounter = 0;
+    /* XPENG_BUILD_TRACKER */
   }
 
   protected synchronized final void addRootViewGroup(
@@ -849,4 +870,49 @@ public class NativeViewHierarchyManager {
     }
     AccessibilityHelper.sendAccessibilityEvent(view, eventType);
   }
+
+  /* XPENG_BUILD_TRACKER */
+  private void trackCreateView(ThemedReactContext themedContext) {
+    if (mCreateViewCounter > mCreateViewCounterMax) {
+      return;
+    }
+
+    mCreateViewCounter++;
+
+    if (mCreateViewCounter == 1 ||
+            mCreateViewCounter == 50 ||
+            mCreateViewCounter == 80 ||
+            mCreateViewCounter == 150) {
+      doTrackCreateView(themedContext);
+    }
+  }
+
+  private void doTrackCreateView(ThemedReactContext themedContext) {
+    if (themedContext == null) {
+      return;
+    }
+
+    TrackerListener tracker = themedContext.getTrackerListener();
+    if (tracker == null) {
+      return;
+    }
+
+    Activity current = themedContext.getCurrentActivity();
+    if (current == null) {
+      return;
+    }
+
+    Bundle payload = new Bundle();
+    payload.putInt(TrackerConsts.KV.key_cv_count.toString(), mCreateViewCounter);
+    payload.putLong(TrackerConsts.KV.key_cv_view_time.toString(), SystemClock.currentTimeMillis());
+    payload.putString(TrackerConsts.KV.key_cv_activity.toString(), current.getClass().getSimpleName());
+
+    TrackerListener.Message msg = new TrackerListener.Message(
+            TrackerConsts.Category.react.toString(),
+            TrackerConsts.SubCategory.cv.toString(),
+            payload);
+
+    tracker.onTrack(msg);
+  }
+  /* XPENG_BUILD_TRACKER */
 }

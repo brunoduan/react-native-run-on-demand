@@ -16,6 +16,10 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.LifecycleEventListener;
 
+/* XPENG_BUILD_TRACKER */
+import xpeng.com.facebook.react.tracker.TrackerListener;
+/* XPENG_BUILD_TRACKER */
+
 /**
  * Wraps {@link ReactContext} with the base {@link Context} passed into the constructor.
  * It provides also a way to start activities using the viewContext to which RN native views belong.
@@ -53,4 +57,11 @@ public class ThemedReactContext extends ReactContext {
   public @Nullable Activity getCurrentActivity() {
     return mReactApplicationContext.getCurrentActivity();
   }
+
+  /* XPENG_BUILD_TRACKER */
+  public @Nullable
+  TrackerListener getTrackerListener() {
+    return mReactApplicationContext.getTrackerListener();
+  }
+  /* XPENG_BUILD_TRACKER */
 }

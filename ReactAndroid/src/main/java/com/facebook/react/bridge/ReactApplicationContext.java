@@ -9,6 +9,11 @@ package com.facebook.react.bridge;
 
 import android.content.Context;
 
+/* XPENG_BUILD_TRACKER */
+import android.annotation.Nullable;
+import xpeng.com.facebook.react.tracker.TrackerListener;
+/* XPENG_BUILD_TRACKER */
+
 /**
  * A context wrapper that always wraps Android Application {@link Context} and
  * {@link CatalystInstance} by extending {@link ReactContext}
@@ -20,4 +25,18 @@ public class ReactApplicationContext extends ReactContext {
   public ReactApplicationContext(Context context) {
     super(context.getApplicationContext());
   }
+
+  /* XPENG_BUILD_TRACKER */
+  private @Nullable
+  TrackerListener mTracker;
+
+  // TrackerListener aims to track events in the current application
+  public void setTrackerListener(TrackerListener listener) {
+    mTracker = listener;
+  }
+
+  public TrackerListener getTrackerListener() {
+    return mTracker;
+  }
+  /* XPENG_BUILD_TRACKER */
 }
