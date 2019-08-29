@@ -87,18 +87,17 @@ JSModulesUnbundle::Module RAMBundleRegistry::getModule(
   }
 
 #ifdef XPENG_BUILD_SPLIT_BUNDLE
-  std::unordered_map<std::string, std::unique_ptr<JSModulesUnbundle>>::iterator it =
-    m_fromStringBundles.begin();
+  std::unordered_map<std::string, std::unique_ptr<JSModulesUnbundle>>::iterator it = m_fromStringBundles.begin();
   for (; it != m_fromStringBundles.end(); it++) {
     if (it->second) {
       JSModulesUnbundle *bundle = it->second.get();
       if (bundle && bundle->exists(moduleId)) {
-        return bundle->getModule(moduleId);
+        return bundleGetModule(bundleId, bundle, moduleId);
       }
     }
   }
 #endif
-
+  
   auto module = getBundle(bundleId)->getModule(moduleId);
   if (bundleId == MAIN_BUNDLE_ID) {
     return module;
@@ -108,6 +107,22 @@ JSModulesUnbundle::Module RAMBundleRegistry::getModule(
     std::move(module.code),
   };
 }
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+JSModulesUnbundle::Module RAMBundleRegistry::bundleGetModule(
+    uint32_t bundleId,
+    JSModulesUnbundle *bundle,
+    uint32_t moduleId) const {
+  auto module = bundle->getModule(moduleId);
+  if (bundleId == MAIN_BUNDLE_ID) {
+    return module;
+  }
+  return {
+    folly::to<std::string>("seg-", bundleId, '_', std::move(module.name)),
+    std::move(module.code),
+  };
+}
+#endif
 
 JSModulesUnbundle* RAMBundleRegistry::getBundle(uint32_t bundleId) const {
   return m_bundles.at(bundleId).get();

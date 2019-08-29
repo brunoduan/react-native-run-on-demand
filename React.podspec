@@ -48,6 +48,8 @@ Pod::Spec.new do |s|
   s.preserve_paths          = "package.json", "LICENSE", "LICENSE-docs"
   s.cocoapods_version       = ">= 1.2.0"
 
+  s.xcconfig = { 'GCC_PREPROCESSOR_DEFINITIONS' => 'XPENG_BUILD_SPLIT_BUNDLE=1' }
+
   s.subspec "Core" do |ss|
     ss.dependency             "yoga", "#{package["version"]}.React"
     ss.source_files         = "React/**/*.{c,h,m,mm,S,cpp}"

@@ -48,13 +48,17 @@ public:
 
 #ifdef XPENG_BUILD_SPLIT_BUNDLE
   void registerBundle(const std::string &sourceURL, const std::string &script);
-  std::unique_ptr<const JSBigString> getStartupCodeFromStringBundles(
-      const std::string &sourcePath);
   bool existsJSModulesUndundle();
+  std::unique_ptr<const JSBigString> getStartupCodeFromStringBundles(const std::string &sourcePath);
 #endif
 
 private:
   JSModulesUnbundle* getBundle(uint32_t bundleId) const;
+  
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  JSModulesUnbundle::Module bundleGetModule(
+     uint32_t bundleId, JSModulesUnbundle *bundle, uint32_t moduleId) const;
+#endif
 
   std::function<std::unique_ptr<JSModulesUnbundle>(std::string)> m_factory;
   std::unordered_map<uint32_t, std::string> m_bundlePaths;

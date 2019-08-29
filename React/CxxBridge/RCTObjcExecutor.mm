@@ -100,6 +100,13 @@ public:
   void registerBundle(uint32_t bundleId, const std::string &bundlePath) override {
     RCTAssert(NO, @"RAM bundles are not supported in RCTObjcExecutor");
   }
+  
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+  void registerBundle(const std::string &sourceURL,
+                      const std::string &script) override {
+    RCTAssert(NO, @"sourceURL RAM bundles are not supported in RCTObjcExecutor");
+  }
+#endif
 
   void callFunction(const std::string &module, const std::string &method,
                     const folly::dynamic &arguments) override {

@@ -40,6 +40,10 @@
 #import "RCTMessageThread.h"
 #import "RCTObjcExecutor.h"
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+#import <cxxreact/JSIndexedRAMBundleString.h>
+#endif
+
 #ifdef WITH_FBSYSTRACE
 #import <React/RCTFBSystrace.h>
 #endif
@@ -1288,6 +1292,19 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithBundleURL:(__unused NSURL *)bundleUR
       object:self->_parentBridge userInfo:@{@"bridge": self}];
     if (isRAMBundle(script)) {
       [self->_performanceLogger markStartForTag:RCTPLRAMBundleLoad];
+      
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+      auto scriptString =  std::make_unique<NSDataBigString>(script);
+      auto ramBundle = std::make_unique<JSIndexedRAMBundleString>(scriptString->c_str(), scriptString->size());
+      std::unique_ptr<const JSBigString> scriptStr = ramBundle->getStartupCode();
+      [self->_performanceLogger markStopForTag:RCTPLRAMBundleLoad];
+      [self->_performanceLogger setValue:scriptStr->size() forTag:RCTPLRAMStartupCodeSize];
+      if (self->_reactInstance) {
+        auto registry = RAMBundleRegistry::multipleBundlesRegistry(std::move(ramBundle), JSIndexedRAMBundleString::buildFactory());
+        self->_reactInstance->loadRAMBundle(std::move(registry), std::move(scriptStr),
+                                            sourceUrlStr.UTF8String, !async);
+      }
+#else
       auto ramBundle = std::make_unique<JSIndexedRAMBundle>(sourceUrlStr.UTF8String);
       std::unique_ptr<const JSBigString> scriptStr = ramBundle->getStartupCode();
       [self->_performanceLogger markStopForTag:RCTPLRAMBundleLoad];
@@ -1297,6 +1314,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithBundleURL:(__unused NSURL *)bundleUR
         self->_reactInstance->loadRAMBundle(std::move(registry), std::move(scriptStr),
                                             sourceUrlStr.UTF8String, !async);
       }
+#endif
     } else if (self->_reactInstance) {
       self->_reactInstance->loadScriptFromString(std::make_unique<NSDataBigString>(script),
                                                  sourceUrlStr.UTF8String, !async);
@@ -1313,6 +1331,64 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithBundleURL:(__unused NSURL *)bundleUR
     _reactInstance->registerBundle(static_cast<uint32_t>(segmentId), path.UTF8String);
   }
 }
+
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+- (void)registerSegmentWithSourceURL:(NSString *)sourceURL script:(NSData *)script
+{
+  if (self->_reactInstance) {
+    const char *str = std::make_unique<NSDataBigString>(script)->c_str();
+    std::string cStr = std::string(str, script.length);
+    self->_reactInstance->registerBundle(sourceURL.UTF8String, cStr);
+  }
+}
+
+- (void)executeSplitUnbundleApplicationScript:(NSData *)script
+                                          url:(NSURL *)url
+                                 needRegister:(BOOL)needRegister
+                                   onComplete:(dispatch_block_t)onComplete
+{
+  RCT_PROFILE_BEGIN_EVENT(RCTProfileTagAlways, @"-[RCTCxxBridge executeSplitUnbundleApplicationScript]", nil);
+  
+  [self executeSplitUnbundleApplicationScript:script url:url needRegister:needRegister async:YES];
+  
+  RCT_PROFILE_END_EVENT(RCTProfileTagAlways, @"");
+  
+  // Assumes that onComplete can be called when the next block on the JS thread is scheduled
+  if (onComplete) {
+    RCTAssert(_jsMessageThread != nullptr, @"executeSplitUnbundleApplicationScript Cannot invoke completion without jsMessageThread");
+    _jsMessageThread->runOnQueue(onComplete);
+  }
+}
+
+- (void)executeSplitUnbundleApplicationScript:(NSData *)script
+                                          url:(NSURL *)url
+                                 needRegister:(BOOL)needRegister
+                                        async:(BOOL)async {
+  [self _tryAndHandleError:^{
+    NSString *sourceUrlStr = deriveSourceURL(url);
+    [[NSNotificationCenter defaultCenter]
+     postNotificationName:RCTJavaScriptWillStartExecutingNotification
+     object:self->_parentBridge userInfo:@{@"bridge": self}];
+    if (isRAMBundle(script)) {
+      [self->_performanceLogger markStartForTag:RCTPLRAMBundleLoad];
+      if (needRegister) {
+        [self registerSegmentWithSourceURL:sourceUrlStr script:script];
+      }
+      [self->_performanceLogger markStopForTag:RCTPLRAMBundleLoad];
+      if (self->_reactInstance) {
+        self->_reactInstance->loadRAMBundle(nullptr, nullptr, sourceUrlStr.UTF8String, !async);
+      }
+    } else if (self->_reactInstance) {
+      self->_reactInstance->loadScriptFromString(std::make_unique<NSDataBigString>(script),
+                                                 sourceUrlStr.UTF8String, !async);
+    } else {
+      std::string methodName = async ? "loadApplicationScript" : "loadApplicationScriptSync";
+      throw std::logic_error("Attempt to call " + methodName + ": on uninitialized bridge");
+    }
+  }];
+}
+#endif
+
 
 #pragma mark - Payload Processing
 

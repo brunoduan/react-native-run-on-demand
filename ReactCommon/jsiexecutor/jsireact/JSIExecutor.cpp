@@ -294,9 +294,32 @@ void JSIExecutor::registerBundle(
         std::make_unique<BigStringBuffer>(std::move(script)),
         JSExecutor::getSyntheticBundlePath(bundleId, bundlePath));
   }
+  
   ReactMarker::logTaggedMarker(
       ReactMarker::REGISTER_JS_SEGMENT_STOP, tag.c_str());
 }
+  
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+void JSIExecutor::registerBundle(
+      const std::string &sourceURL,
+      const std::string &script) {
+  const auto tag = folly::to<std::string>(sourceURL);
+  ReactMarker::logTaggedMarker(
+                               ReactMarker::REGISTER_JS_SEGMENT_START, tag.c_str());
+
+  if (!bundleRegistry_) {
+    throw JSINativeException(
+                             "Could not register bundle, need to load the main bundle at first.");
+
+  }
+  
+  bundleRegistry_->registerBundle(sourceURL, script);
+  
+  ReactMarker::logTaggedMarker(
+                               ReactMarker::REGISTER_JS_SEGMENT_STOP, tag.c_str());
+}
+#endif
+
 
 void JSIExecutor::callFunction(
     const std::string& moduleId,
@@ -487,19 +510,6 @@ Value JSIExecutor::nativeCallSyncHook(const Value* args, size_t count) {
   }
   return valueFromDynamic(*runtime_, result.value());
 }
-
-#ifdef XPENG_BUILD_SPLIT_BUNDLE
-void JSIExecutor::registerBundle(
-    const std::string &sourceURL,
-    const std::string &script) {
-  if (!bundleRegistry_) {
-    throw std::runtime_error(
-        "Could not register bundle, need to load the main bundle at first.");
-  }
-
-  bundleRegistry_->registerBundle(sourceURL, script);
-}
-#endif
 
 } // namespace react
 } // namespace facebook

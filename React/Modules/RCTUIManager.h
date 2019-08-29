@@ -152,6 +152,10 @@ RCT_EXTERN NSString *const RCTUIManagerWillUpdateViewsDueToContentSizeMultiplier
  */
 @property (atomic, retain, readonly) RCTUIManagerObserverCoordinator *observerCoordinator;
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+@property (nonatomic, copy) RCTViewManagerUIBlock createViewBlock;
+#endif
+
 @end
 
 /**

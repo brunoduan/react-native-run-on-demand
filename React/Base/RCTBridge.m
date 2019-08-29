@@ -403,4 +403,10 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
   [self.batchedBridge registerSegmentWithId:segmentId path:path];
 }
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+- (void)registerSegmentWithSourceURL:(NSString *)sourceURL script:(NSData *)script {
+  [self.batchedBridge registerSegmentWithSourceURL:sourceURL script:script];
+}
+#endif
+
 @end

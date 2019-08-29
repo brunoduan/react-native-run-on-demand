@@ -146,6 +146,16 @@ RCT_EXTERN void RCTEnableTurboModule(BOOL enabled);
  */
 - (void)registerSegmentWithId:(NSUInteger)segmentId path:(NSString *)path;
 
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+//新增接口，支持注册unbundle文件
+- (void)registerSegmentWithSourceURL:(NSString *)sourceURL script:(NSData *)script;
+
+- (void)executeSplitUnbundleApplicationScript:(NSData *)script
+                                          url:(NSURL *)url
+                                 needRegister:(BOOL)needRegister
+                                   onComplete:(dispatch_block_t)onComplete;
+#endif
+
 /**
  * Retrieve a bridge module instance by name or class. Note that modules are
  * lazily instantiated, so calling these methods for the first time with a given

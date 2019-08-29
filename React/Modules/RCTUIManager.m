@@ -952,6 +952,12 @@ RCT_EXPORT_METHOD(createView:(nonnull NSNumber *)reactTag
 
     if (preliminaryCreatedView) {
       self->_viewRegistry[reactTag] = preliminaryCreatedView;
+      
+#ifdef XPENG_BUILD_SPLIT_BUNDLE
+      if (self->_createViewBlock) {
+        self->_createViewBlock(self, self->_viewRegistry);
+      }
+#endif
     }
   };
 
