@@ -168,7 +168,7 @@ void JSIExecutor::loadApplicationScript(
     std::string sourceURL) {
   SystraceSection s("JSIExecutor::loadApplicationScript");
 
-  if (!bundleRegistry_->existsJSModulesUndundle()) {
+  if (!bundleRegistry_ || !bundleRegistry_->existsJSModulesUndundle()) {
     // TODO: check for and use precompiled HBC
     runtime_->global().setProperty(
         *runtime_,
