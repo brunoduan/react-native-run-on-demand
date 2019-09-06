@@ -304,9 +304,6 @@ void JSIExecutor::registerBundle(
       const std::string &sourceURL,
       const std::string &script) {
   const auto tag = folly::to<std::string>(sourceURL);
-  ReactMarker::logTaggedMarker(
-                               ReactMarker::REGISTER_JS_SEGMENT_START, tag.c_str());
-
   if (!bundleRegistry_) {
     throw JSINativeException(
                              "Could not register bundle, need to load the main bundle at first.");
@@ -314,9 +311,7 @@ void JSIExecutor::registerBundle(
   }
   
   bundleRegistry_->registerBundle(sourceURL, script);
-  
-  ReactMarker::logTaggedMarker(
-                               ReactMarker::REGISTER_JS_SEGMENT_STOP, tag.c_str());
+
 }
 #endif
 

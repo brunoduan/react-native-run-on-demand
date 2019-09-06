@@ -208,10 +208,11 @@ bool Instance::isIndexedRAMBundleFromScript(const char *script) {
   std::istringstream bundle_stream(script);
   BundleHeader header;
 
-  if (!bundle_stream ||
-      !bundle_stream.read(reinterpret_cast<char *>(&header), sizeof(header))) {
+  if (!bundle_stream) {
       return false;
   }
+
+  bundle_stream.read(reinterpret_cast<char *>(&header), sizeof(header));
 
   return parseTypeFromHeader(header) == ScriptTag::RAMBundle;
 }
