@@ -1,5 +1,9 @@
 # [React Native](https://facebook.github.io/react-native/) &middot;  [![Circle CI Status](https://circleci.com/gh/facebook/react-native.svg?style=shield)](https://circleci.com/gh/facebook/react-native) [![Build status](https://ci.appveyor.com/api/projects/status/g8d58ipi3auqdtrk/branch/master?svg=true)](https://ci.appveyor.com/project/facebook/react-native/branch/master) [![npm version](https://badge.fury.io/js/react-native.svg)](https://badge.fury.io/js/react-native) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md#pull-requests)
 
+优化RN加载性能，初步方案是RN分包，高级方案是RN按需执行。下面两个文档进行了说明，注意当时写文档的时候参考的RN版本是v0.53.3
+- [x] [RN分包](https://github.com/brunoduan/react-native-run-on-demand/blob/develop-v0.59.10/doc/RN%E5%88%86%E5%8C%85.md)
+- [x] [RN按需执行](https://github.com/brunoduan/react-native-run-on-demand/blob/develop-v0.59.10/doc/RN%E6%8C%89%E9%9C%80%E6%89%A7%E8%A1%8C.md)
+
 Learn once, write anywhere: Build mobile apps with React.
 
 See the official [React Native website](https://facebook.github.io/react-native/) for an introduction to React Native.
