@@ -435,8 +435,6 @@ setTimeout(() => {
 
 这里提供另一个非常好用的工具[traceviewify](https://github.com/thlorenz/traceviewify.git)，该工具会将cpuprofile格式文件转换成json文件，然后就可以在chrome浏览器中打开chrome://tracing并加载json文件:
 
-![](../assets/images/jstrace.png)
+![](https://github.com/brunoduan/react-native-run-on-demand/blob/develop-v0.59.10/doc/images/jstrace.png)
 
 有图有真相，enjoy！
-
-https://4ndroidev.github.io/2017/09/06/react-native-bundle/](https://4ndroidev.github.io/2017/09/06/react-native-bundle/
